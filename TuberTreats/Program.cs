@@ -458,6 +458,96 @@ app.MapDelete("/tubertoppings/{id}", (int id) =>
     return Results.NoContent();
 });
 
+// customers endpoints
+
+app.MapGet("/customers", () =>
+{
+    List<CustomerDTO> customerList = customers.Select(c => new CustomerDTO
+    {
+        Id = c.Id,
+        Name = c.Name,
+        Address = c.Address
+    }).ToList();
+
+    return Results.Ok(customerList);
+});
+
+app.MapGet("/customers/{id}", (int id) =>
+{
+    Customer customer = customers.FirstOrDefault(c => c.Id == id);
+    if (customer == null)
+    {
+        return Results.NotFound("Customer not found. Please provide a valid customer Id.");
+    };
+
+    List<TuberOrderDTO> customerOrders = tuberOrders
+        .Where(o => o.CustomerId == id)
+        .Select(o => new TuberOrderDTO
+        {
+            Id = o.Id,
+            OrderPlaceOnDate = o.OrderPlaceOnDate,
+            DeliveredOnDate = o.DeliveredOnDate,
+            CustomerId = o.CustomerId,
+            TuberDriverId = o.TuberDriverId,
+            TuberDriver = o.TuberDriverId.HasValue
+                        ? new TuberDriverDTO
+                        {
+                            Id = o.TuberDriverId.Value,
+                            Name = tuberDrivers.First(d => d.Id == o.TuberDriverId.Value).Name
+                        }
+                        : null,
+            Toppings = tuberToppings
+                        .Where(tt => tt.TuberOrderId == o.Id)
+                        .Select(tt => new ToppingDTO
+                        {
+                            Id = tt.ToppingId,
+                            Name = toppings.First(t => t.Id == tt.ToppingId).Name
+                        }).ToList()
+        }).ToList();
+
+        CustomerDTO customerDTO = new CustomerDTO
+        {
+            Id = customer.Id,
+            Name = customer.Name,
+            Address = customer.Address,
+            TuberOrders = customerOrders
+        };
+
+        return Results.Ok(customerDTO);
+});
+
+app.MapPost("/customers", (Customer newCustomer) =>
+{
+    newCustomer.Id = customers.Count > 0 ? customers.Max(c => c.Id) + 1 : 1;
+    customers.Add(newCustomer);
+
+    CustomerDTO newCustomerDTO = new CustomerDTO
+    {
+        Id = newCustomer.Id,
+        Name = newCustomer.Name,
+        Address = newCustomer.Address
+    };
+
+    return Results.Created($"/customers/{newCustomerDTO.Id}", newCustomerDTO);
+});
+
+app.MapDelete("/customers/{id}", (int id) =>
+{
+    Customer customer = customers.FirstOrDefault(c => c.Id == id);
+    if (customer == null)
+    {
+        return Results.NotFound("Customer not found. Please provide a valid customer Id.");
+    }
+
+    customers.Remove(customer);
+
+    tuberOrders.RemoveAll(o => o.CustomerId == id);
+
+    return Results.NoContent();
+});
+
+
+
 app.Run();
 //don't touch or move this!
 public partial class Program { }
