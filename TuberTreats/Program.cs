@@ -361,6 +361,7 @@ app.MapPost("/tuberorders/{id}/complete", (int id) =>
     return Results.Ok(updatedOrderDTO);
 });
 
+// topping endpoints
 app.MapGet("/toppings", () =>
 {
     List<ToppingDTO> toppingList = toppings.Select(t => new ToppingDTO
@@ -387,6 +388,74 @@ app.MapGet("/toppings/{id}", (int id) =>
     };
 
     return Results.Ok(toppingDTO);
+});
+
+// tubertopping endpoints
+
+app.MapGet("/tubertoppings", () =>
+{
+    List<TuberToppingDTO> tuberToppingList = tuberToppings.Select(tt => new TuberToppingDTO
+    {
+        Id = tt.Id,
+        TuberOrderId = tt.TuberOrderId,
+        ToppingId = tt.ToppingId,
+        Topping = toppings.FirstOrDefault(t => t.Id == tt.ToppingId) != null
+                ? new ToppingDTO
+                {
+                    Id = tt.ToppingId,
+                    Name = toppings.First(t => t.Id ==tt.ToppingId).Name
+                }
+                : null
+    }).ToList();
+
+
+    return Results.Ok(tuberToppingList);
+});
+
+app.MapPost("/tubertoppings", (TuberTopping newTuberTopping) =>
+{
+    TuberOrder order = tuberOrders.FirstOrDefault(o => o.Id == newTuberTopping.TuberOrderId);
+    if (order == null)
+    {
+        return Results.NotFound("Order not found. Please provide a valid order Id.");
+    }
+
+    Topping topping = toppings.FirstOrDefault(t => t.Id == newTuberTopping.ToppingId);
+    if (topping == null)
+    {
+        return Results.NotFound("Topping not found. Please provide a valid topping Id.");
+    }
+
+    newTuberTopping.Id = tuberToppings.Count > 0 ? tuberToppings.Max(tt => tt.Id) + 1 : 1;
+
+    tuberToppings.Add(newTuberTopping);
+
+    TuberToppingDTO newTuberToppingDTO = new TuberToppingDTO
+    {
+        Id = newTuberTopping.Id,
+        TuberOrderId = newTuberTopping.TuberOrderId,
+        ToppingId = newTuberTopping.ToppingId,
+        Topping = new ToppingDTO
+        {
+            Id = topping.Id,
+            Name = topping.Name
+        }
+    };
+
+    return Results.Created($"/tubertoppings/{newTuberTopping.Id}", newTuberToppingDTO);
+});
+
+app.MapDelete("/tubertoppings/{id}", (int id) =>
+{
+    TuberTopping tuberTopping = tuberToppings.FirstOrDefault(tt => tt.Id == id);
+    if (tuberTopping == null)
+    {
+        return Results.NotFound("TuberTopping not found. Please provide a valid Id.");
+    }
+
+    tuberToppings.Remove(tuberTopping);
+
+    return Results.NoContent();
 });
 
 app.Run();
