@@ -361,6 +361,34 @@ app.MapPost("/tuberorders/{id}/complete", (int id) =>
     return Results.Ok(updatedOrderDTO);
 });
 
+app.MapGet("/toppings", () =>
+{
+    List<ToppingDTO> toppingList = toppings.Select(t => new ToppingDTO
+    {
+        Id = t.Id,
+        Name = t.Name
+    }).ToList();
+
+    return Results.Ok(toppingList);
+});
+
+app.MapGet("/toppings/{id}", (int id) =>
+{
+    Topping topping = toppings.FirstOrDefault(t => t.Id == id);
+    if (topping == null)
+    {
+        return Results.NotFound("Topping not found. Please provide a valid topping Id.");
+    }
+
+    ToppingDTO toppingDTO = new ToppingDTO
+    {
+        Id = topping.Id,
+        Name = topping.Name
+    };
+
+    return Results.Ok(toppingDTO);
+});
+
 app.Run();
 //don't touch or move this!
 public partial class Program { }
